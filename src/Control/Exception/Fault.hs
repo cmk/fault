@@ -32,8 +32,13 @@ module Control.Exception.Fault (
 
     -- * Fault
     Fault (..),
+
+    -- * Construction
     ignore,
     accept,
+    handle,
+    handleAll,
+    fallback,
 
     -- * Selection
     (<!>),
@@ -41,10 +46,19 @@ module Control.Exception.Fault (
     choice,
     refault,
 
+    -- * Retry
+    retry,
+    retryWhen,
+
+    -- * Tracing
+    trace,
+    annotate,
+
     -- * Evaluation
     recover,
     runFault,
     runFault',
+    withFaultIO,
     withFault,
 
     -- * Re-exports
@@ -141,6 +155,41 @@ ignore = Fault . either throw
 accept :: Exception e => (SomeException -> b) -> Fault e b
 accept f = Fault $ either f (f . toException)
 
+-- | Handle a specific exception type.
+--
+-- @
+-- ignore processRequest
+--   \<!\> handle \@TimeoutException (\\_ -> defaultResponse)
+--   \<!\> handle \@AuthException (\\_ -> forbidden403)
+-- @
+{-# INLINEABLE handle #-}
+handle :: Exception e => (e -> b) -> Fault e b
+handle f = Fault $ either (f . unwrap) f
+  where unwrap se = case fromException se of
+          Just e  -> e
+          Nothing -> Ex.throw se
+
+-- | Handle any synchronous exception.
+--
+-- @
+-- ignore riskyComputation
+--   \`handleAll\` (\\e -> defaultValue)
+-- @
+{-# INLINEABLE handleAll #-}
+handleAll :: Fault a b -> (SomeException -> b) -> Fault a b
+handleAll base handler = Fault $ \case
+  Left e  -> handler e
+  Right a -> runFault base a
+
+-- | Provide a constant fallback for a specific exception type.
+--
+-- @
+-- ignore parseConfig \<!\> fallback \@ParseException defaultConfig
+-- @
+{-# INLINEABLE fallback #-}
+fallback :: Exception e => b -> Fault e b
+fallback def = handle (const def)
+
 ---------------------------------------------------------------------
 -- Selection
 ---------------------------------------------------------------------
@@ -174,6 +223,78 @@ refault :: ((a1 -> b) -> a2 -> b) -> Fault a1 b -> Fault a2 b
 refault f = Fault . liftA2 either recover (f . runFault)
 
 ---------------------------------------------------------------------
+-- Retry
+---------------------------------------------------------------------
+
+-- | Retry on any synchronous exception, up to @n@ times.
+--
+-- @
+-- 'runFault' ('retry' 3) riskyComputation
+-- @
+--
+-- Composes with other handlers:
+--
+-- @
+-- 'retry' 3 '>>>' ignore processResult
+-- @
+{-# INLINEABLE retry #-}
+retry :: Int -> Fault a a
+retry n = Fault $ either throw go
+  where
+    go a = case pureTry a of
+      Right b -> b
+      Left e | n <= 0    -> throw e
+             | otherwise -> runFault (retry (n - 1)) a
+
+-- | Retry when a predicate on the exception holds.
+--
+-- @
+-- 'retryWhen' 3 isTransient
+-- @
+{-# INLINEABLE retryWhen #-}
+retryWhen :: Int -> (SomeException -> Bool) -> Fault a a
+retryWhen n p = Fault $ either throw go
+  where
+    go a = case pureTry a of
+      Right b -> b
+      Left e | n > 0 && p e -> runFault (retryWhen (n - 1) p) a
+             | otherwise    -> throw e
+
+---------------------------------------------------------------------
+-- Tracing
+---------------------------------------------------------------------
+
+-- | Observe exceptions passing through a handler.
+--
+-- @
+-- 'trace' (\\e _ -> log (displayException e)) myHandler
+-- @
+{-# INLINEABLE trace #-}
+trace :: (SomeException -> b -> b) -> Fault a b -> Fault a b
+trace f (Fault g) = Fault $ \ea -> case ea of
+  Left e  -> f e (g ea)
+  Right _ -> g ea
+
+-- | Add context to exceptions via 'CallStacked' from "Control.Exception.Fault.Throw".
+-- Re-wraps any exception with the given label prepended to the message.
+--
+-- @
+-- 'annotate' "while processing request" myHandler
+-- @
+{-# INLINEABLE annotate #-}
+annotate :: String -> Fault a b -> Fault a b
+annotate msg (Fault g) = Fault $ \case
+  Left e  -> g . Left . toException $ AnnotatedException msg e
+  Right a -> g (Right a)
+
+-- | Internal: an exception with an annotation.
+data AnnotatedException = AnnotatedException String SomeException
+  deriving (Show, Typeable)
+
+instance Exception AnnotatedException where
+  displayException (AnnotatedException msg e) = msg ++ ": " ++ displayException e
+
+---------------------------------------------------------------------
 -- Evaluation
 ---------------------------------------------------------------------
 
@@ -192,7 +313,16 @@ runFault f = unFault f . pureTry
 runFault' :: (HasCallStack, NFData a) => Fault a b -> a -> b
 runFault' f = unFault f . pureTryDeep
 
--- | Run a fault handler in a 'MonadUnliftIO' context.
+-- | Run a fault handler on a monadic action (simpler than 'withFault').
+--
+-- @
+-- withFaultIO myHandler (readFile "config.yaml")
+-- @
+{-# INLINEABLE withFaultIO #-}
+withFaultIO :: (HasCallStack, MonadUnliftIO m) => Fault a b -> m a -> m b
+withFaultIO f action = unFault f <$> Catch.tryAny (evaluate =<< action)
+
+-- | Run a fault handler in a 'MonadUnliftIO' context with a function argument.
 {-# INLINEABLE withFault #-}
 withFault :: (HasCallStack, MonadUnliftIO m) => Fault a b -> (r -> m a) -> r -> m b
 withFault f g = pure . unFault f <=< Catch.tryAny . (evaluate <=< g)
