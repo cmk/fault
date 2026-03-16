@@ -321,16 +321,28 @@ infixl 3 <!>
 -- @
 -- baseHandler \<!\> accept \@ArithException (const fallback)
 -- @
+-- | Override behavior for a particular exception type.
+--
+-- On the 'Left' (exception) path, if the exception matches type @e@
+-- via 'fromException', route to the override handler; otherwise use
+-- the base. The 'Right' (value) path always uses the base.
+--
+-- Properties:
+--
+-- [Recovery] @'recover' (f \<!\> 'handle' \@E k) ('toException' e) ≡ k e@
+--
+-- [Pass-through] If @'fromException' \@E se ≡ Nothing@, then
+-- @'recover' (f \<!\> 'handle' \@E k) se ≡ 'recover' f se@
+--
+-- [Right-biased] The rightmost handler for a given type wins:
+-- @f \<!\> g \<!\> h@ tries @h@ first, then @g@, then @f@.
 {-# INLINEABLE (<!>) #-}
 (<!>) :: forall e a b. Exception e => Fault a b -> Fault e b -> Fault a b
-(<!>) = flip $ decide f
-  where
-    f :: a -> Either e a
-    f a = unsafePerformIO $
-      (return $! Right $! a) `Ex.catch` \(se :: SomeException) ->
-        case Ex.fromException se of
-          Just e  -> return (Left e)
-          Nothing -> return (Right a)
+(<!>) (Fault base) (Fault handler) = Fault $ \case
+  Left se -> case Ex.fromException se of
+    Just e  -> handler (Right e)
+    Nothing -> base (Left se)
+  Right a -> base (Right a)
 
 -- | Contravariant branching.
 {-# INLINEABLE decide #-}
