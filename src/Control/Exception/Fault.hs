@@ -14,26 +14,36 @@ handler = ignore processRequest
 runFault handler request
 @
 
-= Modules
+== Running handlers in IO
 
-* "Control.Exception.Fault.Class" — Common classes: 'Exception', 'MonadIO', 'MonadUnliftIO', etc.
-* "Control.Exception.Fault.Type" — The 'Fault' profunctor, instances, and combinators.
+Use 'withFaultIO' or 'withFault' to run a pure handler on a monadic action:
+
+@
+withFaultIO handler (readFile "config.yaml")
+@
+
+== Modules
+
+* "Control.Exception.Fault.Type" — 'Fault' and 'Defect' types, construction, composition, retry, tracing.
+* "Control.Exception.Fault.Wrap" — Exception wrappers: 'AnnotatedException', 'CallStackException', 'DisplayedException', sync\/async.
+* "Control.Exception.Fault.Throw" — Type-safe throw ('NotInIO'), 'throwDefect', 'displayExceptions'.
 * "Control.Exception.Fault.Catch" — Lifted catch\/try\/bracket\/mask (sync-safe, no @exceptions@ dep).
-* "Control.Exception.Fault.Throw" — Type-safe throw, 'CallStackException', 'Display', 'NotInIO'.
-
-This module re-exports the full API.
+* "Control.Exception.Fault.Class" — Re-exports: 'Exception', 'MonadIO', 'MonadUnliftIO', 'HasCallStack', 'NFData'.
 -}
 module Control.Exception.Fault (
-    -- * Classes and common types
-    module Control.Exception.Fault.Class,
+    -- * Running handlers in IO
+    withFaultIO,
+    withFault,
     -- * Fault type and combinators
     module Control.Exception.Fault.Type,
-    -- * Catching and cleanup
-    module Control.Exception.Fault.Catch,
-    -- * Throwing
-    module Control.Exception.Fault.Throw,
     -- * Exception wrappers
     module Control.Exception.Fault.Wrap,
+    -- * Throwing
+    module Control.Exception.Fault.Throw,
+    -- * Catching and cleanup
+    module Control.Exception.Fault.Catch,
+    -- * Classes and common types
+    module Control.Exception.Fault.Class,
 ) where
 
 import Control.Exception.Fault.Class
