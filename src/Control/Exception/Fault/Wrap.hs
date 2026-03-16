@@ -17,7 +17,6 @@ module Control.Exception.Fault.Wrap
 where
 
 import Control.Exception.Fault.Class
-import Control.Exception.Fault.Type (Defect(..), defect)
 import Data.Typeable (cast)
 import GHC.Stack (prettyCallStack)
 
@@ -39,24 +38,6 @@ data CallStackException e = CallStackException
 instance Exception e => Exception (CallStackException e) where
   displayException (CallStackException e cs) =
     displayException e ++ "\n" ++ prettyCallStack cs
-
----------------------------------------------------------------------
--- Exception instance for Defect e String
----------------------------------------------------------------------
-
--- | @'Defect' e String@ is throwable: the projection @e -> String@ provides
--- 'displayException', avoiding the need for a 'Show' instance on @e@.
---
--- @
--- throwIO (Defect myValue show)
--- @
-instance Typeable e => Show (Defect e String) where
-  showsPrec p d =
-    showParen (p > 10) $
-      showString "Defect _ " . showsPrec 11 (defect d)
-
-instance Typeable e => Exception (Defect e String) where
-  displayException = defect
 
 ---------------------------------------------------------------------
 -- Display

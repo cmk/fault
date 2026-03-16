@@ -201,6 +201,16 @@ defect (Defect a f) = f a
 instance Functor (Defect a) where
   fmap g (Defect a f) = Defect a (g . f)
 
+-- | @'Defect' e String@ is throwable: the projection provides
+-- 'displayException', avoiding the need for a 'Show' instance on @e@.
+instance Typeable e => Show (Defect e String) where
+  showsPrec p d =
+    showParen (p > 10) $
+      showString "Defect _ " . showsPrec 11 (defect d)
+
+instance Typeable e => Exception (Defect e String) where
+  displayException = defect
+
 ---------------------------------------------------------------------
 -- AnnotatedException
 ---------------------------------------------------------------------
