@@ -51,11 +51,21 @@ import qualified Control.Monad.Trans.Writer.Lazy as Lazy
 import qualified Control.Monad.Trans.Writer.Strict as Strict
 import Data.Kind (Constraint)
 import Data.Typeable (Typeable)
-import Control.Exception.Fault.Show as Show
 import GHC.Stack (CallStack, HasCallStack, callStack, prettyCallStack)
 import GHC.TypeLits (ErrorMessage(..), TypeError)
 import System.Exit (exitFailure)
 import System.IO (IO, hPutStr, stderr)
+
+-- Show helpers (inlined from Control.Exception.Fault.Show)
+
+-- | For `show`ing non-operator data constructors.
+appPrec :: Int -> String -> [ShowS] -> ShowS
+appPrec p app args =
+  showParen (p > 10) $ showString app . foldMap (showString " " .) args
+
+-- | For `show`ing arguments to a non-operator data constructor.
+arg :: Show a => a -> ShowS
+arg = showsPrec 11
 
 -- | A replacement for `Except.throw` that complains if you should be calling
 --  `throwIO` instead.
@@ -104,10 +114,10 @@ data ExceptFailure e = ExceptFailure { display :: e -> String, failure :: e }
 --          (`ExceptFailure` e)@, we have to skip it here.
 instance Show (ExceptFailure e) where
   showsPrec p (ExceptFailure display failure) =
-    Show.appPrec
+    appPrec
       p
       "ExceptFailure"
-      [showString "_", Show.arg $ display failure]
+      [showString "_", arg $ display failure]
 
 instance Typeable e => Exception (ExceptFailure e) where
   displayException (ExceptFailure display failure) = display failure
