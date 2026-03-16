@@ -70,8 +70,8 @@ import Data.Typeable
 import GHC.Stack (HasCallStack)
 import Prelude
 import System.IO.Unsafe (unsafePerformIO)
-import UnliftIO (MonadIO(..), MonadUnliftIO(..))
-import qualified UnliftIO.Exception as UE
+import Control.Exception.Fault.Catch (MonadIO(..), MonadUnliftIO(..), pureTry, pureTryDeep, evaluate)
+import qualified Control.Exception.Fault.Catch as Catch
 
 -- | A software fault handler.
 --
@@ -96,7 +96,7 @@ deriving via ((->) (Either SomeException a) b) instance Monoid b => Monoid (Faul
 
 instance C.Category Fault where
     id = ignore id
-    Fault f1 . Fault f2 = Fault $ f1 . UE.pureTry . f2
+    Fault f1 . Fault f2 = Fault $ f1 . pureTry . f2
 
 instance Strong Fault where
     first' = first
@@ -156,7 +156,7 @@ infixl 3 <!>
 (<!>) :: Exception e => Fault a b -> Fault e b -> Fault a b
 (<!>) = flip $ decide f
   where
-    f a = unsafePerformIO $ (return $! Right $! a) `UE.catch` (return . Left)
+    f a = unsafePerformIO $ (return $! Right $! a) `Catch.catch` (return . Left)
 
 -- | Contravariant branching.
 {-# INLINEABLE decide #-}
@@ -185,17 +185,17 @@ recover f = unFault f . Left
 -- | Run a fault handler on a value (pure, catches impure exceptions).
 {-# INLINEABLE runFault #-}
 runFault :: HasCallStack => Fault a b -> a -> b
-runFault f = unFault f . UE.pureTry
+runFault f = unFault f . pureTry
 
 -- | Run a fault handler on a value, deeply evaluating first.
 {-# INLINEABLE runFault' #-}
 runFault' :: (HasCallStack, NFData a) => Fault a b -> a -> b
-runFault' f = unFault f . UE.pureTryDeep
+runFault' f = unFault f . pureTryDeep
 
 -- | Run a fault handler in a 'MonadUnliftIO' context.
 {-# INLINEABLE withFault #-}
 withFault :: (HasCallStack, MonadUnliftIO m) => Fault a b -> (r -> m a) -> r -> m b
-withFault f g = pure . unFault f <=< UE.tryAny . (UE.evaluate <=< g)
+withFault f g = pure . unFault f <=< Catch.tryAny . (evaluate <=< g)
 
 ---------------------------------------------------------------------
 -- Internal

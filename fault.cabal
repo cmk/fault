@@ -32,6 +32,7 @@ source-repository head
 library
   exposed-modules:
       Control.Exception.Fault
+      Control.Exception.Fault.Catch
       Control.Exception.Fault.Show
       Control.Exception.Fault.Throw
 
@@ -62,4 +63,4 @@ library
     , deepseq
     , profunctors
     , transformers
-    , unliftio
+    , unliftio-core
