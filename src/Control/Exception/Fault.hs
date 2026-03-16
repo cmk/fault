@@ -31,18 +31,49 @@ withFaultIO handler (readFile "config.yaml")
 * "Control.Exception.Fault.Class" — Re-exports: 'Exception', 'MonadIO', 'MonadUnliftIO', 'HasCallStack', 'NFData'.
 -}
 module Control.Exception.Fault (
+
+    Fault(..),
+    ignore,
+    accept,
+    handle,
+    fallback,
+    handleAll,
+    handleDefect,
+    retry,
+    retryWhen,
+
+    -- * Evaluation
+    recover,
+    runFault,
+    runFault',
+    evaluate,
+    
     -- * Running handlers in IO
-    withFaultIO,
     withFault,
+    withFaultIO,
+    withFaultMasked,
+    withFaultBracket,
 
-    -- * Fault type and combinators
-    -- | See "Control.Exception.Fault.Type" for the full API.
-    module Control.Exception.Fault.Type,
+    -- * Combinators
+    (<!>),
+    decide,
+    choice,
+    refault,
 
-    -- * Exception wrappers
-    -- | See "Control.Exception.Fault.Wrap" for the full API.
-    module Control.Exception.Fault.Wrap,
+    -- * Tracing
+    trace,
+    annotate,
+    displayExceptions,
 
+    -- * Catching and cleanup
+    -- | See "Control.Exception.Fault.Catch" for the full API.
+    try,
+    tryAny,
+    catch,
+    bracket,
+    finally,
+    onException,
+    
     -- * Throwing
     -- | See "Control.Exception.Fault.Throw" for the full API.
     throwIO,
@@ -51,18 +82,10 @@ module Control.Exception.Fault (
     throwLeft,
     throwIOLeft,
     NotInIO,
-    displayExceptions,
-
-    -- * Catching and cleanup
-    -- | See "Control.Exception.Fault.Catch" for the full API.
-    catch,
-    try,
-    tryAny,
-    bracket,
-    finally,
-    onException,
-    evaluate,
-
+    
+    -- * Exception wrappers
+    -- | See "Control.Exception.Fault.Wrap" for the full API.
+    module Control.Exception.Fault.Wrap,
     -- * Classes and common types
     -- | See "Control.Exception.Fault.Class" for the full API.
     module Control.Exception.Fault.Class,
@@ -76,7 +99,7 @@ import Control.Exception.Fault.Throw
   , NotInIO, displayExceptions
   )
 import Control.Exception.Fault.Catch
-  ( withFaultIO, withFault
+  ( withFaultIO, withFault, withFaultMasked, withFaultBracket
   , catch, try, tryAny
   , bracket, finally, onException
   , evaluate

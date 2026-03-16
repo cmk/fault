@@ -10,6 +10,8 @@ module Control.Exception.Fault.Catch
   ( -- * Fault evaluation in IO
     withFaultIO,
     withFault,
+    withFaultMasked,
+    withFaultBracket,
     -- * Throwing
     throwIO,
     throwTo,
@@ -68,6 +70,35 @@ withFaultIO f action = unFault f <$> tryAny (evaluate =<< action)
 {-# INLINEABLE withFault #-}
 withFault :: HasCallStack => MonadUnliftIO m => Fault a b -> (r -> m a) -> r -> m b
 withFault f g = fmap (unFault f) . tryAny . (evaluate <=< g)
+
+-- | Run a 'Fault' handler on a masked action, with access to the
+-- restore function.
+--
+-- @
+-- withFaultMasked myHandler $ \\restore ->
+--   restore (readFile "config.yaml")
+-- @
+{-# INLINEABLE withFaultMasked #-}
+withFaultMasked :: MonadUnliftIO m => Fault a b -> ((forall x. m x -> m x) -> m a) -> m b
+withFaultMasked f action = mask $ \restore ->
+  withFaultIO f (action restore)
+
+-- | Run a 'Fault' handler with bracket-style resource management.
+--
+-- The acquire and release run outside the handler; the body runs
+-- through the 'Fault'.
+--
+-- @
+-- withFaultBracket myHandler
+--   (openFile "out.log" WriteMode)
+--   hClose
+--   (\\h -> hPutStr h result)
+-- @
+{-# INLINEABLE withFaultBracket #-}
+withFaultBracket :: MonadUnliftIO m => Fault a b -> m r -> (r -> m c) -> (r -> m a) -> m b
+withFaultBracket f acquire release action =
+  bracket acquire release $ \r ->
+    withFaultIO f (action r)
 
 ---------------------------------------------------------------------
 -- Catching
