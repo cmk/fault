@@ -10,9 +10,9 @@ description:
   '(\<!\>)', and run with 'runFault' or 'withFault'.
   .
   Also provides: type-safe throw\/throwIO distinction ('NotInIO'),
-  call stack attachment ('CallStacked'), displayException fix
-  ('Display', 'displayExceptions'), and structured error lifting
-  ('ExceptFailure').
+  call stack attachment ('CallStackException'), displayException fix
+  ('DisplayedException', 'displayExceptions'), and structured error
+  lifting ('Defect').
 
 category:       Control, Exceptions, Profunctors
 stability:      Experimental
@@ -67,3 +67,15 @@ library
     , profunctors
     , transformers
     , unliftio-core
+
+test-suite properties
+  type:              exitcode-stdio-1.0
+  main-is:           Main.hs
+  ghc-options:       -Wall -threaded
+  hs-source-dirs:    test
+  default-language:  Haskell2010
+
+  build-depends:
+      base
+    , fault
+    , hedgehog

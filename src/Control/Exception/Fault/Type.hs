@@ -131,6 +131,13 @@ instance Distributive (Fault a) where
 deriving via ((->) (Either SomeException a) b) instance Semigroup b => Semigroup (Fault a b)
 deriving via ((->) (Either SomeException a) b) instance Monoid b => Monoid (Fault a b)
 
+-- | 'Category' instance composes fault handlers left-to-right.
+--
+-- Properties:
+--
+-- [Left identity]  @'id' '>>>' f ≡ f@
+-- [Right identity] @f '>>>' 'id' ≡ f@
+-- [Associativity]  @(f '>>>' g) '>>>' h ≡ f '>>>' (g '>>>' h)@
 instance C.Category Fault where
     id = ignore id
     Fault f1 . Fault f2 = Fault $ f1 . pureTry . f2
@@ -247,6 +254,11 @@ instance Exception AnnotatedException where
 --
 -- This composes the handler with the defect's projection,
 -- keeping the original value intact.
+--
+-- Properties:
+--
+-- [Identity]    @'handleDefect' ('ignore' id) d ≡ d@
+-- [Composition] @'handleDefect' f ('handleDefect' g d) ≡ 'handleDefect' (f '.' g) d@
 handleDefect :: Fault b c -> Defect a b -> Defect a c
 handleDefect f (Defect a g) = Defect a (runFault f . g)
 {-# INLINE handleDefect #-}
@@ -256,6 +268,11 @@ handleDefect f (Defect a g) = Defect a (runFault f . g)
 ---------------------------------------------------------------------
 
 -- | Lift a pure function into a 'Fault', re-throwing on exception.
+--
+-- Properties:
+--
+-- [Round-trip] @'runFault' ('ignore' f) a ≡ f a@ (when @f a@ does not throw)
+-- [Identity]   @'ignore' 'id' ≡ 'Control.Category.id'@
 --
 -- Avoid using 'ignore' as the final arrow in a composition:
 --
