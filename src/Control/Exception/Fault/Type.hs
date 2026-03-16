@@ -137,10 +137,22 @@ instance ArrowLoop Fault where
 -- This is the dual of a lens — instead of focusing /into/ a structure,
 -- it carries a value /out/ with its context.
 --
+-- 'Defect' and 'Fault' are duals: a @Defect b a@ holds a value that
+-- /could become/ a @b@ (via its projection), while a @Fault a b@
+-- /handles/ values that may have already failed. They compose naturally:
+--
+-- @
+-- 'runFault' myHandler ('defect' myDefect)
+-- @
+--
+-- A @Defect SomeException a@ is a value that could become an exception;
+-- a @Fault a b@ is something that handles exceptions. Together they
+-- form a complete error pipeline: construct a defect, project it,
+-- handle the result.
+--
 -- The concrete @Defect String e@ (an error with its display function)
--- is used in "Control.Exception.Fault.Wrap" as an exception wrapper.
--- The general form is useful anywhere you need a value alongside
--- its rendering, serialization, or classification.
+-- is used in "Control.Exception.Fault.Wrap" as a throwable exception
+-- wrapper, avoiding the need for a 'Show' instance on the error type.
 --
 -- @
 -- Defect displayException myException  :: Defect String SomeException
