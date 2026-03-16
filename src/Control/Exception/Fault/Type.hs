@@ -69,6 +69,7 @@ import Control.Category (Category)
 import qualified Control.Category as C
 import Control.Exception.Fault.Class
 import Control.Exception.Fault.Catch (pureTry, pureTryDeep, evaluate)
+import Control.Exception.Fault.Wrap (AnnotatedException(..))
 import qualified Control.Exception.Fault.Catch as Catch
 import qualified Control.Exception as Ex
 import Control.Monad
@@ -277,13 +278,6 @@ annotate :: String -> Fault a b -> Fault a b
 annotate msg (Fault g) = Fault $ \case
   Left e  -> g . Left . toException $ AnnotatedException msg e
   Right a -> g (Right a)
-
--- | Internal: an exception with an annotation.
-data AnnotatedException = AnnotatedException String SomeException
-  deriving (Show, Typeable)
-
-instance Exception AnnotatedException where
-  displayException (AnnotatedException msg e) = msg ++ ": " ++ displayException e
 
 ---------------------------------------------------------------------
 -- Evaluation

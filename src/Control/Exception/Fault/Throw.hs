@@ -8,31 +8,32 @@
 module Control.Exception.Fault.Throw
   ( -- * A better `Except.throw`
     throw,
-    -- * attach a `CallStack` to exceptions
-    CallStacked (..),
+    -- * Call stacks
+    CallStackException (..),
     catchIgnoringStack,
     handleIgnoringStack,
     addCallStack,
     throwWithCallStack,
     throwIOWithCallStack,
-    -- * treat arbitrary types as exceptions
-    ExceptFailure (..),
-    throwFailure,
-    throwIOFailure,
-    -- * convert from disjunctions to exceptions
+    -- * Lifting values to exceptions
+    Defect (..),
+    throwDefect,
+    throwIODefect,
+    -- * Disjunctions to exceptions
     throwLeft,
     throwIOLeft,
-    -- * to make exceptions useful as an exit mechanism
+    -- * Display fix
     Display (..),
     displayExceptions,
     catchIgnoringDisplay,
     handleIgnoringDisplay,
-    -- * throw checking
+    -- * Throw checking
     NotInIO,
   )
 where
 
 import           Control.Exception.Fault.Class
+import           Control.Exception.Fault.Wrap (CallStackException(..), Defect(..), Display(..))
 import           Control.Exception (catch, handle, throwIO)
 import qualified Control.Exception as Except
 import           Control.Monad.Trans.Accum
@@ -56,71 +57,27 @@ import GHC.TypeLits (ErrorMessage(..), TypeError)
 import System.Exit (exitFailure)
 import System.IO (IO, hPutStr, stderr)
 
--- Show helpers (inlined from Control.Exception.Fault.Show)
-
--- | For `show`ing non-operator data constructors.
-appPrec :: Int -> String -> [ShowS] -> ShowS
-appPrec p app args =
-  showParen (p > 10) $ showString app . foldMap (showString " " .) args
-
--- | For `show`ing arguments to a non-operator data constructor.
-arg :: Show a => a -> ShowS
-arg = showsPrec 11
 
 -- | A replacement for `Except.throw` that complains if you should be calling
 --  `throwIO` instead.
 throw :: (Exception e, NotInIO a) => e -> a
 throw = Except.throw
 
--- | An Exception that simply wraps another exception to attach a call stack
-data CallStacked e = CallStacked { exception :: e, calls :: CallStack }
-  deriving Show
-
 -- | See `handleIgnoringStack`.
 catchIgnoringStack :: Exception e => IO a -> (e -> IO a) -> IO a
 catchIgnoringStack = flip handleIgnoringStack
 
--- | Like `handle`, but checks for both the "bare" and `CallStacked` versions of
---   an exception.
+-- | Like `handle`, but checks for both the "bare" and 'CallStackException'
+--   versions of an exception.
 --
 --  __NB__: This does mean that if you re-`throwIO` you'll discard the original
 --         `CallStack`.
 handleIgnoringStack :: Exception e => (e -> IO a) -> IO a -> IO a
-handleIgnoringStack f = handle f . handle (\(CallStacked e _) -> f e)
-
-instance Exception e => Exception (CallStacked e) where
-  displayException (CallStacked e calls') = displayException e <> "\n" <> prettyCallStack calls'
+handleIgnoringStack f = handle f . handle (\(CallStackException e _) -> f e)
 
 -- | Adds the current call stack to the exception.
-addCallStack :: HasCallStack => e -> CallStacked e
-addCallStack e = CallStacked e callStack
-
--- | A way to lift reified errors into the exception system. This means we get
---   the best of both worlds when we're in IO - we can fail with a
---   locally-defined message and still leave it up to someone to catch it if
---   necessary.
---
---   Without this, being able to `throw` your structured errors means defining a
---   `Show` instance (that you might not otherwise want) right next to the error
---   definition rather than close to the user.
---
---   Since this is likely to be used far from where an error occurs, it doesn't
---   include a `CallStack`. But `CallStacked . Lifted` is available if you want
---   to add a stack to it.
-data ExceptFailure e = ExceptFailure { display :: e -> String, failure :: e }
-
--- | __NB__: This instance is /not/ `read`able. `Exception` extends `Show`, so
---           to avoid having an extraneous @`Show` e@ constraint on @`Exception`
---          (`ExceptFailure` e)@, we have to skip it here.
-instance Show (ExceptFailure e) where
-  showsPrec p (ExceptFailure display failure) =
-    appPrec
-      p
-      "ExceptFailure"
-      [showString "_", arg $ display failure]
-
-instance Typeable e => Exception (ExceptFailure e) where
-  displayException (ExceptFailure display failure) = display failure
+addCallStack :: HasCallStack => e -> CallStackException e
+addCallStack e = CallStackException e callStack
 
 -- | Tries to prevent using non-`IO`-safe `throw` operations in `IO`. It covers
 --   the standard transformers, but still can't /guarantee/ that there's no `IO`
@@ -157,18 +114,18 @@ type family NotInIO a :: Constraint where
 
 -- | Throws any type. The provided function is what's used for serialization if
 --   the exception isn't caught.
-throwFailure :: (Typeable e, NotInIO a) => (e -> String) -> e -> a
-throwFailure f = throw . ExceptFailure f
+throwDefect :: (Typeable e, NotInIO a) => (e -> String) -> e -> a
+throwDefect f = throw . Defect f
 
--- | See `throwFailure`.
-throwIOFailure :: Typeable e => (e -> String) -> e -> IO a
-throwIOFailure f = throwIO . ExceptFailure f
+-- | See 'throwDefect'.
+throwIODefect :: Typeable e => (e -> String) -> e -> IO a
+throwIODefect f = throwIO . Defect f
 
 -- | Throws an exception that's expecting to carry a `CallStack`.
 --
 --   I /think/ these two should be equivalent
 --
--- > throwWithCallStack . CallStacked
+-- > throwWithCallStack . CallStackException
 -- > throw . addCallStack
 throwWithCallStack :: (HasCallStack, Exception e, NotInIO a) => (CallStack -> e) -> a
 throwWithCallStack = throw . ($ callStack)
@@ -184,18 +141,6 @@ throwLeft = either throw id
 -- | See `throwLeft`.
 throwIOLeft :: Exception e => Either e a -> IO a
 throwIOLeft = either throwIO pure
-
--- | A wrapper to convince GHC to use `displayException` when printing failures.
-newtype Display a = Display a
-
--- | __NB__: This instance is /not/ `read`able. It simply calls
---          `displayException` on the wrapped `Exception`, allowing programmers
---           to not abuse their own `Show` instances while still getting better
---           output from GHC.
-instance Exception e => Show (Display e) where
-  show (Display e) = displayException e
-
-instance Exception e => Exception (Display e)
 
 -- | This "fixes" @main@ to use `displayException` instead of `show` when
 --   failing with an exception.

@@ -43,8 +43,8 @@ where
 import Control.DeepSeq (NFData(rnf))
 import Control.Concurrent (ThreadId)
 import Control.Exception.Fault.Class
+import Control.Exception.Fault.Wrap (SyncExceptionWrapper(..), AsyncExceptionWrapper(..))
 import qualified Control.Exception as E
-import Data.Typeable (cast)
 import Prelude
 import System.IO.Unsafe (unsafePerformIO)
 
@@ -179,26 +179,8 @@ onException action cleanup = withRunInIO $ \run ->
 {-# INLINE onException #-}
 
 ---------------------------------------------------------------------
--- Sync/async exception wrappers (from safe-exceptions)
+-- Sync/async conversion (wrappers in Control.Exception.Fault.Wrap)
 ---------------------------------------------------------------------
-
--- | Wrap a synchronous exception to be thrown asynchronously.
-newtype AsyncExceptionWrapper = AsyncExceptionWrapper
-  { unAsyncExceptionWrapper :: SomeException }
-  deriving (Show, Typeable)
-
-instance Exception AsyncExceptionWrapper where
-  toException = toException . SomeAsyncException
-  fromException se = do
-    SomeAsyncException e <- fromException se
-    cast e
-
--- | Wrap an asynchronous exception to be caught synchronously.
-newtype SyncExceptionWrapper = SyncExceptionWrapper
-  { unSyncExceptionWrapper :: SomeException }
-  deriving (Show, Typeable)
-
-instance Exception SyncExceptionWrapper
 
 -- | Convert an exception to a synchronous one (wrapping if async).
 toSyncException :: Exception e => e -> SomeException

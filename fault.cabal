@@ -36,6 +36,7 @@ library
       Control.Exception.Fault.Type
       Control.Exception.Fault.Catch
       Control.Exception.Fault.Throw
+      Control.Exception.Fault.Wrap
 
   default-language: Haskell2010
 

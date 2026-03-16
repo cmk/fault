@@ -32,9 +32,12 @@ module Control.Exception.Fault (
     module Control.Exception.Fault.Catch,
     -- * Throwing
     module Control.Exception.Fault.Throw,
+    -- * Exception wrappers
+    module Control.Exception.Fault.Wrap,
 ) where
 
 import Control.Exception.Fault.Class
 import Control.Exception.Fault.Type
 import Control.Exception.Fault.Catch hiding (handle)
 import Control.Exception.Fault.Throw hiding (throw)
+import Control.Exception.Fault.Wrap
