@@ -34,20 +34,50 @@ module Control.Exception.Fault (
     -- * Running handlers in IO
     withFaultIO,
     withFault,
+
     -- * Fault type and combinators
+    -- | See "Control.Exception.Fault.Type" for the full API.
     module Control.Exception.Fault.Type,
+
     -- * Exception wrappers
+    -- | See "Control.Exception.Fault.Wrap" for the full API.
     module Control.Exception.Fault.Wrap,
+
     -- * Throwing
-    module Control.Exception.Fault.Throw,
+    -- | See "Control.Exception.Fault.Throw" for the full API.
+    throwIO,
+    throwDefect,
+    throwIODefect,
+    throwLeft,
+    throwIOLeft,
+    NotInIO,
+    displayExceptions,
+
     -- * Catching and cleanup
-    module Control.Exception.Fault.Catch,
+    -- | See "Control.Exception.Fault.Catch" for the full API.
+    catch,
+    try,
+    tryAny,
+    bracket,
+    finally,
+    onException,
+    evaluate,
+
     -- * Classes and common types
+    -- | See "Control.Exception.Fault.Class" for the full API.
     module Control.Exception.Fault.Class,
 ) where
 
 import Control.Exception.Fault.Class
 import Control.Exception.Fault.Type
-import Control.Exception.Fault.Catch hiding (handle, throwIO)
-import Control.Exception.Fault.Throw hiding (throw)
 import Control.Exception.Fault.Wrap
+import Control.Exception.Fault.Throw
+  ( throwIO, throwDefect, throwIODefect, throwLeft, throwIOLeft
+  , NotInIO, displayExceptions
+  )
+import Control.Exception.Fault.Catch
+  ( withFaultIO, withFault
+  , catch, try, tryAny
+  , bracket, finally, onException
+  , evaluate
+  )
