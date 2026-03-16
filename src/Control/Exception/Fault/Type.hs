@@ -36,7 +36,12 @@ module Control.Exception.Fault.Type (
     -- * Defect
     Defect (..),
     defect,
-    redefect,
+
+    -- * AnnotatedException
+    AnnotatedException (..),
+
+    -- * Fault + Defect
+    handleDefect,
 
     -- * Construction
     ignore,
@@ -133,51 +138,77 @@ instance ArrowLoop Fault where
 
 -- | A value paired with a way to present it.
 --
--- @Defect b a@ is an @a@ together with a projection @a -> b@.
--- This is the dual of a lens — instead of focusing /into/ a structure,
--- it carries a value /out/ with its context.
+-- @Defect a b@ is an @a@ together with a projection @a -> b@.
+-- @Defect a@ is a 'Functor' in @b@ — you can post-compose the
+-- projection with 'fmap'.
 --
--- 'Defect' and 'Fault' are duals: a @Defect b a@ holds a value that
--- /could become/ a @b@ (via its projection), while a @Fault a b@
--- /handles/ values that may have already failed. They compose naturally:
+-- 'Defect' and 'Fault' are duals: a @Defect a b@ holds a value
+-- that /could become/ a @b@ (via its projection), while a
+-- @Fault b c@ /handles/ values that may have already failed.
+-- They compose via 'handleDefect':
 --
 -- @
--- 'runFault' myHandler ('defect' myDefect)
+-- 'handleDefect' myHandler myDefect :: Defect a c
 -- @
 --
--- A @Defect SomeException a@ is a value that could become an exception;
--- a @Fault a b@ is something that handles exceptions. Together they
--- form a complete error pipeline: construct a defect, project it,
--- handle the result.
+-- A @Defect a SomeException@ is a value that could become an
+-- exception; a @Fault b c@ is something that handles exceptions.
+-- Together they form a complete error pipeline: construct a defect,
+-- project it, handle the result.
 --
--- The concrete @Defect String e@ (an error with its display function)
+-- The concrete @Defect e String@ (an error with its display function)
 -- is used in "Control.Exception.Fault.Wrap" as a throwable exception
 -- wrapper, avoiding the need for a 'Show' instance on the error type.
 --
 -- @
--- Defect displayException myException  :: Defect String SomeException
--- Defect toJSON myValue                :: Defect Value a
--- Defect (const "redacted") secret     :: Defect String Secret
+-- Defect myException displayException :: Defect SomeException String
+-- Defect myValue toJSON               :: Defect a Value
+-- Defect secret (const "redacted")    :: Defect Secret String
 -- @
-data Defect b a = Defect (a -> b) a
+data Defect a b = Defect a (a -> b)
 
 -- | Extract the projected value.
 --
 -- @
--- 'defect' ('Defect' show 42) = "42"
+-- 'defect' ('Defect' 42 show) = "42"
 -- @
-defect :: Defect b a -> b
-defect (Defect f a) = f a
+defect :: Defect a b -> b
+defect (Defect a f) = f a
 {-# INLINE defect #-}
 
--- | Change the projection.
+instance Functor (Defect a) where
+  fmap g (Defect a f) = Defect a (g . f)
+
+---------------------------------------------------------------------
+-- AnnotatedException
+---------------------------------------------------------------------
+
+-- | An exception annotated with a context message.
+--
+-- Used by 'annotate' to add context as exceptions propagate
+-- through composed handlers.
+data AnnotatedException = AnnotatedException String SomeException
+  deriving (Show, Typeable)
+
+instance Exception AnnotatedException where
+  displayException (AnnotatedException msg e) =
+    msg ++ ": " ++ displayException e
+
+---------------------------------------------------------------------
+-- Fault + Defect
+---------------------------------------------------------------------
+
+-- | Apply a fault handler to the projection of a defect.
 --
 -- @
--- 'redefect' length ('Defect' show 42) = 'Defect' (length . show) 42
+-- 'handleDefect' ('retry' 3) ('Defect' riskyValue id) :: Defect a a
 -- @
-redefect :: (b -> c) -> Defect b a -> Defect c a
-redefect g (Defect f a) = Defect (g . f) a
-{-# INLINE redefect #-}
+--
+-- This composes the handler with the defect's projection,
+-- keeping the original value intact.
+handleDefect :: Fault b c -> Defect a b -> Defect a c
+handleDefect f (Defect a g) = Defect a (runFault f . g)
+{-# INLINE handleDefect #-}
 
 ---------------------------------------------------------------------
 -- Construction
@@ -332,16 +363,8 @@ trace f (Fault g) = Fault $ \ea -> case ea of
 {-# INLINEABLE annotate #-}
 annotate :: String -> Fault a b -> Fault a b
 annotate msg (Fault g) = Fault $ \case
-  Left e  -> g . Left . toException $ Annotated msg e
+  Left e  -> g . Left . toException $ AnnotatedException msg e
   Right a -> g (Right a)
-
--- | Internal: an exception with an annotation. The public version
--- with more features is 'Control.Exception.Fault.Wrap.AnnotatedException'.
-data Annotated = Annotated String SomeException
-  deriving (Show, Typeable)
-
-instance Exception Annotated where
-  displayException (Annotated m e) = m ++ ": " ++ displayException e
 
 ---------------------------------------------------------------------
 -- Evaluation

@@ -19,7 +19,7 @@ runFault handler request
 * "Control.Exception.Fault.Class" — Common classes: 'Exception', 'MonadIO', 'MonadUnliftIO', etc.
 * "Control.Exception.Fault.Type" — The 'Fault' profunctor, instances, and combinators.
 * "Control.Exception.Fault.Catch" — Lifted catch\/try\/bracket\/mask (sync-safe, no @exceptions@ dep).
-* "Control.Exception.Fault.Throw" — Type-safe throw, 'CallStacked', 'Display', 'NotInIO'.
+* "Control.Exception.Fault.Throw" — Type-safe throw, 'CallStackException', 'Display', 'NotInIO'.
 
 This module re-exports the full API.
 -}

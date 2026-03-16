@@ -37,7 +37,8 @@ module Control.Exception.Fault.Throw
 where
 
 import           Control.Exception.Fault.Class
-import           Control.Exception.Fault.Wrap (CallStackException(..), Defect(..), Display(..))
+import           Control.Exception.Fault.Type (Defect(..))
+import           Control.Exception.Fault.Wrap (CallStackException(..), Display(..))
 import qualified Control.Exception.Fault.Catch as Catch
 import qualified Control.Exception as Except
 import           Control.Monad.Trans.Accum
@@ -70,7 +71,7 @@ throw = Except.throw
 -- | Throw any 'Typeable' value as a 'Defect'. The function provides
 -- 'displayException' if uncaught.
 throwDefect :: Typeable e => NotInIO a => (e -> String) -> e -> a
-throwDefect f = throw . Defect f
+throwDefect f e = throw (Defect e f)
 
 -- | Throw an exception with the current 'CallStack' attached.
 throwWithCallStack :: HasCallStack => Exception e => NotInIO a => (CallStack -> e) -> a
@@ -90,7 +91,7 @@ throwIO = Catch.throwIO
 
 -- | Throw any 'Typeable' value as a 'Defect' in 'MonadIO'.
 throwIODefect :: MonadIO m => Typeable e => (e -> String) -> e -> m a
-throwIODefect f = throwIO . Defect f
+throwIODefect f e = throwIO (Defect e f)
 
 -- | Throw an exception with the current 'CallStack' in 'MonadIO'.
 throwIOWithCallStack :: HasCallStack => MonadIO m => Exception e => (CallStack -> e) -> m a

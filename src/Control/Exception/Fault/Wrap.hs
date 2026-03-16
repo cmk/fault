@@ -7,11 +7,7 @@
 -- hierarchy, or fix GHC's display behavior.
 module Control.Exception.Fault.Wrap
   ( -- * Context
-    AnnotatedException (..),
     CallStackException (..),
-    -- * Lifting (exception instance for @Defect String e@)
-    Defect (..),
-    defect,
     -- * Display
     Display (..),
     -- * Sync\/async conversion
@@ -26,19 +22,8 @@ import Data.Typeable (cast)
 import GHC.Stack (prettyCallStack)
 
 ---------------------------------------------------------------------
--- Context
+-- Context (AnnotatedException re-exported from Type)
 ---------------------------------------------------------------------
-
--- | An exception annotated with a message string.
---
--- Used by 'Control.Exception.Fault.Type.annotate' to add context
--- as exceptions propagate through composed handlers.
-data AnnotatedException = AnnotatedException String SomeException
-  deriving (Show, Typeable)
-
-instance Exception AnnotatedException where
-  displayException (AnnotatedException msg e) =
-    msg ++ ": " ++ displayException e
 
 -- | An exception with an attached 'CallStack'.
 --
@@ -56,21 +41,21 @@ instance Exception e => Exception (CallStackException e) where
     displayException e ++ "\n" ++ prettyCallStack cs
 
 ---------------------------------------------------------------------
--- Lifting
+-- Exception instance for Defect e String
 ---------------------------------------------------------------------
 
--- | @'Defect' String e@ is throwable: the projection @e -> String@ provides
+-- | @'Defect' e String@ is throwable: the projection @e -> String@ provides
 -- 'displayException', avoiding the need for a 'Show' instance on @e@.
 --
 -- @
--- throwIO (Defect show myValue)
+-- throwIO (Defect myValue show)
 -- @
-instance Typeable e => Show (Defect String e) where
+instance Typeable e => Show (Defect e String) where
   showsPrec p d =
     showParen (p > 10) $
       showString "Defect _ " . showsPrec 11 (defect d)
 
-instance Typeable e => Exception (Defect String e) where
+instance Typeable e => Exception (Defect e String) where
   displayException = defect
 
 ---------------------------------------------------------------------
