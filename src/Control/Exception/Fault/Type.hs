@@ -82,7 +82,10 @@ import Control.Exception.Fault.Class
 import qualified Control.Exception as Ex
 import Control.Monad
 import Data.Bifunctor (bimap)
+import Data.Distributive (Distributive(..))
 import Data.Profunctor (Profunctor(..), Strong(..), Choice(..), Closed(..), Costrong(..), Cochoice(..))
+import Data.Profunctor.Rep (Corepresentable(..))
+import Data.Profunctor.Sieve (Cosieve(..))
 import Data.Profunctor.Types (Costar(..))
 import Prelude
 import System.IO.Unsafe (unsafePerformIO)
@@ -110,13 +113,21 @@ pureTryDeep a = unsafePerformIO $
 newtype Fault a b = Fault {unFault :: Either SomeException a -> b}
     deriving (Typeable)
 
+deriving via (Costar (Either SomeException)) instance Profunctor Fault
 deriving via (Costar (Either SomeException)) instance Closed Fault
 deriving via (Costar (Either SomeException)) instance Costrong Fault
 deriving via (Costar (Either SomeException)) instance Cochoice Fault
-deriving via (Costar (Either SomeException)) instance Profunctor Fault
+instance Cosieve Fault (Either SomeException) where
+  cosieve (Fault f) = f
+
+instance Corepresentable Fault where
+  type Corep Fault = Either SomeException
+  cotabulate f = Fault f
 deriving via (Costar (Either SomeException) a) instance Functor (Fault a)
 deriving via (Costar (Either SomeException) a) instance Applicative (Fault a)
 deriving via (Costar (Either SomeException) a) instance Monad (Fault a)
+instance Distributive (Fault a) where
+  distribute fs = Fault $ \ea -> fmap (\(Fault f) -> f ea) fs
 deriving via ((->) (Either SomeException a) b) instance Semigroup b => Semigroup (Fault a b)
 deriving via ((->) (Either SomeException a) b) instance Monoid b => Monoid (Fault a b)
 
