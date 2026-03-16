@@ -1,0 +1,8 @@
+packages: .
+
+optional-packages:
+    /Users/cmk/Documents/Code/haskell/profunctor-optics/profunctor-optics/*.cabal
+    /Users/cmk/Documents/Code/haskell/coapplicative/*.cabal
+
+allow-newer: all
+write-ghc-environment-files: always
