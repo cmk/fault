@@ -32,7 +32,8 @@ module Control.Exception.Fault.Throw
   )
 where
 
-import           Control.Exception (Exception (..), SomeException, catch, handle, throwIO)
+import           Control.Exception.Fault.Class
+import           Control.Exception (catch, handle, throwIO)
 import qualified Control.Exception as Except
 import           Control.Monad.Trans.Accum
 import           Control.Monad.Trans.Cont
@@ -50,8 +51,7 @@ import qualified Control.Monad.Trans.Writer.CPS as CPS
 import qualified Control.Monad.Trans.Writer.Lazy as Lazy
 import qualified Control.Monad.Trans.Writer.Strict as Strict
 import Data.Kind (Constraint)
-import Data.Typeable (Typeable)
-import GHC.Stack (CallStack, HasCallStack, callStack, prettyCallStack)
+import GHC.Stack (prettyCallStack)
 import GHC.TypeLits (ErrorMessage(..), TypeError)
 import System.Exit (exitFailure)
 import System.IO (IO, hPutStr, stderr)

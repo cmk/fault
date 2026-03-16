@@ -37,22 +37,14 @@ module Control.Exception.Fault.Catch
     toAsyncException,
     isSyncException,
     isAsyncException,
-    -- * Re-exports
-    Exception (..),
-    SomeException (..),
-    SomeAsyncException (..),
-    MonadIO (..),
-    MonadUnliftIO (..),
   )
 where
 
 import Control.DeepSeq (NFData(rnf))
 import Control.Concurrent (ThreadId)
-import Control.Exception (Exception (..), SomeAsyncException (..), SomeException (..))
+import Control.Exception.Fault.Class
 import qualified Control.Exception as E
-import Control.Monad.IO.Unlift (MonadIO (..), MonadUnliftIO (..))
-import Data.Maybe (maybe)
-import Data.Typeable (Typeable, cast)
+import Data.Typeable (cast)
 import Prelude
 import System.IO.Unsafe (unsafePerformIO)
 

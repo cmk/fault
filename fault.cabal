@@ -32,6 +32,7 @@ source-repository head
 library
   exposed-modules:
       Control.Exception.Fault
+      Control.Exception.Fault.Class
       Control.Exception.Fault.Type
       Control.Exception.Fault.Catch
       Control.Exception.Fault.Throw

@@ -16,6 +16,7 @@ runFault handler request
 
 = Modules
 
+* "Control.Exception.Fault.Class" — Common classes: 'Exception', 'MonadIO', 'MonadUnliftIO', etc.
 * "Control.Exception.Fault.Type" — The 'Fault' profunctor, instances, and combinators.
 * "Control.Exception.Fault.Catch" — Lifted catch\/try\/bracket\/mask (sync-safe, no @exceptions@ dep).
 * "Control.Exception.Fault.Throw" — Type-safe throw, 'CallStacked', 'Display', 'NotInIO'.
@@ -23,6 +24,8 @@ runFault handler request
 This module re-exports the full API.
 -}
 module Control.Exception.Fault (
+    -- * Classes and common types
+    module Control.Exception.Fault.Class,
     -- * Fault type and combinators
     module Control.Exception.Fault.Type,
     -- * Catching and cleanup
@@ -31,20 +34,7 @@ module Control.Exception.Fault (
     module Control.Exception.Fault.Throw,
 ) where
 
+import Control.Exception.Fault.Class
 import Control.Exception.Fault.Type
-import Control.Exception.Fault.Catch hiding
-  ( handle       -- conflicts with Fault.Type.handle
-  , evaluate     -- re-exported from Type
-  , MonadIO(..)  -- re-exported from Type
-  , MonadUnliftIO(..) -- re-exported from Type
-  , Exception(..)     -- re-exported from Type
-  , SomeException(..) -- re-exported from Type
-  , SomeAsyncException(..)
-  )
-import Control.Exception.Fault.Throw hiding
-  ( throw        -- conflicts with Fault.Type (internal)
-  , Exception(..)
-  , HasCallStack
-  , MonadIO(..)
-  , MonadUnliftIO(..)
-  )
+import Control.Exception.Fault.Catch hiding (handle)
+import Control.Exception.Fault.Throw hiding (throw)

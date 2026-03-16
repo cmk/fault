@@ -61,31 +61,22 @@ module Control.Exception.Fault.Type (
     withFaultIO,
     withFault,
 
-    -- * Re-exports
-    SomeException (..),
-    HasCallStack,
-    Exception (..),
-    MonadIO (..),
-    MonadUnliftIO (..),
 ) where
 
 import Control.Applicative
 import Control.Arrow (Arrow(..), ArrowChoice(..), ArrowLoop(..))
 import Control.Category (Category)
 import qualified Control.Category as C
-import Control.DeepSeq (NFData)
-import Control.Exception (Exception(..), SomeException(..))
+import Control.Exception.Fault.Class
+import Control.Exception.Fault.Catch (pureTry, pureTryDeep, evaluate)
+import qualified Control.Exception.Fault.Catch as Catch
 import qualified Control.Exception as Ex
 import Control.Monad
 import Data.Bifunctor (bimap)
 import Data.Profunctor (Profunctor(..), Strong(..), Choice(..), Closed(..), Costrong(..), Cochoice(..))
 import Data.Profunctor.Types (Costar(..))
-import Data.Typeable
-import GHC.Stack (HasCallStack)
 import Prelude
 import System.IO.Unsafe (unsafePerformIO)
-import Control.Exception.Fault.Catch (MonadIO(..), MonadUnliftIO(..), pureTry, pureTryDeep, evaluate)
-import qualified Control.Exception.Fault.Catch as Catch
 
 -- | A software fault handler.
 --
