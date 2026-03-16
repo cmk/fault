@@ -9,7 +9,7 @@ module Control.Exception.Fault.Wrap
   ( -- * Context
     CallStackException (..),
     -- * Display
-    Display (..),
+    DisplayedException (..),
     -- * Sync\/async conversion
     SyncExceptionWrapper (..),
     AsyncExceptionWrapper (..),
@@ -40,23 +40,27 @@ instance Exception e => Exception (CallStackException e) where
     displayException e ++ "\n" ++ prettyCallStack cs
 
 ---------------------------------------------------------------------
--- Display
+-- DisplayedException
 ---------------------------------------------------------------------
 
--- | A wrapper that makes GHC use 'displayException' instead of 'show'
--- when printing uncaught exceptions.
+-- | A zero-overhead wrapper that makes GHC use 'displayException'
+-- instead of 'show' when printing uncaught exceptions.
+--
+-- Unlike 'Control.Exception.Fault.Type.AnnotatedException', this does
+-- not add any information to the exception — it only fixes GHC's
+-- rendering behavior. Use 'displayExceptions' to wrap @main@.
 --
 -- @
 -- main = 'Control.Exception.Fault.Throw.displayExceptions' actualMain
 -- @
 --
 -- See [Why doesn't GHC use my displayException method?](https://stackoverflow.com/questions/55490766)
-newtype Display a = Display a
+newtype DisplayedException a = DisplayedException a
 
-instance Exception e => Show (Display e) where
-  show (Display e) = displayException e
+instance Exception e => Show (DisplayedException e) where
+  show (DisplayedException e) = displayException e
 
-instance Exception e => Exception (Display e)
+instance Exception e => Exception (DisplayedException e)
 
 ---------------------------------------------------------------------
 -- Sync/async conversion

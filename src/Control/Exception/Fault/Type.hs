@@ -218,7 +218,16 @@ instance Typeable e => Exception (Defect e String) where
 -- | An exception annotated with a context message.
 --
 -- Used by 'annotate' to add context as exceptions propagate
--- through composed handlers.
+-- through composed handlers. Builds up a chain of context:
+--
+-- @
+-- "while processing request: while parsing body: parse error at line 5"
+-- @
+--
+-- Unlike 'Control.Exception.Fault.Wrap.DisplayedException', which only
+-- fixes how GHC /renders/ an exception, 'AnnotatedException' enriches
+-- the exception with additional information. The original exception is
+-- preserved inside and can still be extracted with 'fromException'.
 data AnnotatedException = AnnotatedException String SomeException
   deriving (Show, Typeable)
 

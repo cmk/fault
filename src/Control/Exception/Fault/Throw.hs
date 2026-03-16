@@ -27,7 +27,7 @@ module Control.Exception.Fault.Throw
     catchIgnoringStack,
     handleIgnoringStack,
     -- * Display fix
-    Display (..),
+    DisplayedException (..),
     displayExceptions,
     catchIgnoringDisplay,
     handleIgnoringDisplay,
@@ -38,7 +38,7 @@ where
 
 import           Control.Exception.Fault.Class
 import           Control.Exception.Fault.Type (Defect(..))
-import           Control.Exception.Fault.Wrap (CallStackException(..), Display(..))
+import           Control.Exception.Fault.Wrap (CallStackException(..), DisplayedException(..))
 import qualified Control.Exception.Fault.Catch as Catch
 import qualified Control.Exception as Except
 import           Control.Monad.Trans.Accum
@@ -120,7 +120,7 @@ handleIgnoringStack :: MonadUnliftIO m => Exception e => (e -> m a) -> m a -> m 
 handleIgnoringStack f = Catch.handle f . Catch.handle (\(CallStackException e _) -> f e)
 
 ---------------------------------------------------------------------
--- Display fix
+-- DisplayedException fix
 ---------------------------------------------------------------------
 
 -- | Fix @main@ to use 'displayException' instead of 'show' for uncaught exceptions.
@@ -132,11 +132,11 @@ handleIgnoringStack f = Catch.handle f . Catch.handle (\(CallStackException e _)
 -- See [Why doesn't GHC use my displayException method?](https://stackoverflow.com/questions/55490766)
 displayExceptions :: MonadUnliftIO m => m a -> m a
 displayExceptions =
-  handleIgnoringDisplay (\e -> throwIO (Display (e :: SomeException)))
+  handleIgnoringDisplay (\e -> throwIO (DisplayedException (e :: SomeException)))
 
--- | Handle an exception, seeing through 'Display' wrappers.
+-- | Handle an exception, seeing through 'DisplayedException' wrappers.
 handleIgnoringDisplay :: MonadUnliftIO m => Exception e => (e -> m a) -> m a -> m a
-handleIgnoringDisplay f = Catch.handle f . Catch.handle (\(Display e) -> f e)
+handleIgnoringDisplay f = Catch.handle f . Catch.handle (\(DisplayedException e) -> f e)
 
 -- | Catch variant of 'handleIgnoringDisplay'.
 catchIgnoringDisplay :: MonadUnliftIO m => Exception e => m a -> (e -> m a) -> m a
