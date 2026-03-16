@@ -33,6 +33,11 @@ module Control.Exception.Fault.Type (
     -- * Fault
     Fault (..),
 
+    -- * Defect
+    Defect (..),
+    defect,
+    redefect,
+
     -- * Construction
     ignore,
     accept,
@@ -69,7 +74,6 @@ import Control.Category (Category)
 import qualified Control.Category as C
 import Control.Exception.Fault.Class
 import Control.Exception.Fault.Catch (pureTry, pureTryDeep, evaluate)
-import Control.Exception.Fault.Wrap (AnnotatedException(..))
 import qualified Control.Exception.Fault.Catch as Catch
 import qualified Control.Exception as Ex
 import Control.Monad
@@ -122,6 +126,46 @@ instance ArrowChoice Fault where
 
 instance ArrowLoop Fault where
     loop = unfirst
+
+---------------------------------------------------------------------
+-- Defect
+---------------------------------------------------------------------
+
+-- | A value paired with a way to present it.
+--
+-- @Defect b a@ is an @a@ together with a projection @a -> b@.
+-- This is the dual of a lens — instead of focusing /into/ a structure,
+-- it carries a value /out/ with its context.
+--
+-- The concrete @Defect String e@ (an error with its display function)
+-- is used in "Control.Exception.Fault.Wrap" as an exception wrapper.
+-- The general form is useful anywhere you need a value alongside
+-- its rendering, serialization, or classification.
+--
+-- @
+-- Defect displayException myException  :: Defect String SomeException
+-- Defect toJSON myValue                :: Defect Value a
+-- Defect (const "redacted") secret     :: Defect String Secret
+-- @
+data Defect b a = Defect (a -> b) a
+
+-- | Extract the projected value.
+--
+-- @
+-- 'defect' ('Defect' show 42) = "42"
+-- @
+defect :: Defect b a -> b
+defect (Defect f a) = f a
+{-# INLINE defect #-}
+
+-- | Change the projection.
+--
+-- @
+-- 'redefect' length ('Defect' show 42) = 'Defect' (length . show) 42
+-- @
+redefect :: (b -> c) -> Defect b a -> Defect c a
+redefect g (Defect f a) = Defect (g . f) a
+{-# INLINE redefect #-}
 
 ---------------------------------------------------------------------
 -- Construction
@@ -276,8 +320,16 @@ trace f (Fault g) = Fault $ \ea -> case ea of
 {-# INLINEABLE annotate #-}
 annotate :: String -> Fault a b -> Fault a b
 annotate msg (Fault g) = Fault $ \case
-  Left e  -> g . Left . toException $ AnnotatedException msg e
+  Left e  -> g . Left . toException $ Annotated msg e
   Right a -> g (Right a)
+
+-- | Internal: an exception with an annotation. The public version
+-- with more features is 'Control.Exception.Fault.Wrap.AnnotatedException'.
+data Annotated = Annotated String SomeException
+  deriving (Show, Typeable)
+
+instance Exception Annotated where
+  displayException (Annotated m e) = m ++ ": " ++ displayException e
 
 ---------------------------------------------------------------------
 -- Evaluation

@@ -9,8 +9,9 @@ module Control.Exception.Fault.Wrap
   ( -- * Context
     AnnotatedException (..),
     CallStackException (..),
-    -- * Lifting
+    -- * Lifting (exception instance for @Defect String e@)
     Defect (..),
+    defect,
     -- * Display
     Display (..),
     -- * Sync\/async conversion
@@ -20,6 +21,7 @@ module Control.Exception.Fault.Wrap
 where
 
 import Control.Exception.Fault.Class
+import Control.Exception.Fault.Type (Defect(..), defect)
 import Data.Typeable (cast)
 import GHC.Stack (prettyCallStack)
 
@@ -57,30 +59,19 @@ instance Exception e => Exception (CallStackException e) where
 -- Lifting
 ---------------------------------------------------------------------
 
--- | Lift any 'Typeable' value into the exception hierarchy.
---
--- The provided function is used for 'displayException' if the
--- exception is not caught. This avoids requiring a 'Show' instance
--- on the error type.
+-- | @'Defect' String e@ is throwable: the projection @e -> String@ provides
+-- 'displayException', avoiding the need for a 'Show' instance on @e@.
 --
 -- @
--- 'throwIO' ('Defect' show myValue)
+-- throwIO (Defect show myValue)
 -- @
---
--- In IEEE 1044 terminology, a defect is a concrete manifestation
--- of an error in software — an imperfection that may lead to a fault.
-data Defect e = Defect
-  { defectDisplay :: e -> String
-  , defect :: e
-  }
-
-instance Show (Defect e) where
-  showsPrec p (Defect f e) =
+instance Typeable e => Show (Defect String e) where
+  showsPrec p d =
     showParen (p > 10) $
-      showString "Defect " . showString "_" . showString " " . showsPrec 11 (f e)
+      showString "Defect _ " . showsPrec 11 (defect d)
 
-instance Typeable e => Exception (Defect e) where
-  displayException (Defect f e) = f e
+instance Typeable e => Exception (Defect String e) where
+  displayException = defect
 
 ---------------------------------------------------------------------
 -- Display
