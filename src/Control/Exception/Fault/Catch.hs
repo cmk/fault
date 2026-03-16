@@ -1,13 +1,15 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
--- | Exception catching utilities, inlined from @unliftio@ and
--- @safe-exceptions@ to avoid the @exceptions@ transitive dependency.
+-- | Monadic exception handling and resource cleanup.
+--
+-- Extends "Control.Exception.Fault.Type" with 'MonadUnliftIO'-lifted
+-- catching, masking, bracket, and Fault evaluation in IO.
 --
 -- All catching functions only catch synchronous exceptions by default.
 module Control.Exception.Fault.Catch
-  ( -- * Pure catching
-    pureTry,
-    pureTryDeep,
+  ( -- * Fault evaluation in IO
+    withFaultIO,
+    withFault,
     -- * Throwing
     throwIO,
     throwTo,
@@ -40,26 +42,36 @@ module Control.Exception.Fault.Catch
   )
 where
 
-import Control.DeepSeq (NFData(rnf))
 import Control.Concurrent (ThreadId)
 import Control.Exception.Fault.Class
+import Control.Exception.Fault.Type (Fault, unFault)
 import Control.Exception.Fault.Wrap (SyncExceptionWrapper(..), AsyncExceptionWrapper(..))
+import Control.Monad ((<=<))
 import qualified Control.Exception as E
+import Data.Typeable (cast)
 import Prelude
-import System.IO.Unsafe (unsafePerformIO)
 
--- | Try to evaluate a value purely, catching any impure exceptions.
-pureTry :: a -> Either SomeException a
-pureTry a = unsafePerformIO $
-  (return $! Right $! a) `E.catch` \e -> return (Left (e :: SomeException))
-{-# INLINE pureTry #-}
+---------------------------------------------------------------------
+-- Fault evaluation in IO
+---------------------------------------------------------------------
 
--- | Like 'pureTry', but fully evaluates the value via 'NFData' first.
-pureTryDeep :: NFData a => a -> Either SomeException a
-pureTryDeep a = unsafePerformIO $
-  (Right <$> E.evaluate (force a)) `E.catch` \e -> return (Left (e :: SomeException))
-  where force x = rnf x `seq` x
-{-# INLINE pureTryDeep #-}
+-- | Run a fault handler on a monadic action.
+--
+-- @
+-- withFaultIO myHandler (readFile "config.yaml")
+-- @
+{-# INLINEABLE withFaultIO #-}
+withFaultIO :: HasCallStack => MonadUnliftIO m => Fault a b -> m a -> m b
+withFaultIO f action = unFault f <$> tryAny (evaluate =<< action)
+
+-- | Run a fault handler in a 'MonadUnliftIO' context with a function argument.
+{-# INLINEABLE withFault #-}
+withFault :: HasCallStack => MonadUnliftIO m => Fault a b -> (r -> m a) -> r -> m b
+withFault f g = fmap (unFault f) . tryAny . (evaluate <=< g)
+
+---------------------------------------------------------------------
+-- Catching
+---------------------------------------------------------------------
 
 -- | Catch synchronous exceptions only (async exceptions are re-thrown).
 catch :: MonadUnliftIO m => Exception e => m a -> (e -> m a) -> m a

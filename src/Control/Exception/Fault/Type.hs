@@ -64,12 +64,12 @@ module Control.Exception.Fault.Type (
     trace,
     annotate,
 
-    -- * Evaluation
+    -- * Pure evaluation
     recover,
     runFault,
     runFault',
-    withFaultIO,
-    withFault,
+    pureTry,
+    pureTryDeep,
 
 ) where
 
@@ -77,9 +77,8 @@ import Control.Applicative
 import Control.Arrow (Arrow(..), ArrowChoice(..), ArrowLoop(..))
 import Control.Category (Category)
 import qualified Control.Category as C
+import Control.DeepSeq (NFData(rnf))
 import Control.Exception.Fault.Class
-import Control.Exception.Fault.Catch (pureTry, pureTryDeep, evaluate)
-import qualified Control.Exception.Fault.Catch as Catch
 import qualified Control.Exception as Ex
 import Control.Monad
 import Data.Bifunctor (bimap)
@@ -87,6 +86,18 @@ import Data.Profunctor (Profunctor(..), Strong(..), Choice(..), Closed(..), Cost
 import Data.Profunctor.Types (Costar(..))
 import Prelude
 import System.IO.Unsafe (unsafePerformIO)
+
+-- | Try to evaluate a value purely, catching any impure exceptions.
+pureTry :: a -> Either SomeException a
+pureTry a = unsafePerformIO $
+  (return $! Right $! a) `Ex.catch` \e -> return (Left (e :: SomeException))
+{-# INLINE pureTry #-}
+
+-- | Like 'pureTry', but fully evaluates via 'NFData' first.
+pureTryDeep :: NFData a => a -> Either SomeException a
+pureTryDeep a = unsafePerformIO $
+  (Right <$> Ex.evaluate (rnf a `seq` a)) `Ex.catch` \e -> return (Left (e :: SomeException))
+{-# INLINE pureTryDeep #-}
 
 -- | A software fault handler.
 --
@@ -281,10 +292,15 @@ infixl 3 <!>
 -- baseHandler \<!\> accept \@ArithException (const fallback)
 -- @
 {-# INLINEABLE (<!>) #-}
-(<!>) :: Exception e => Fault a b -> Fault e b -> Fault a b
+(<!>) :: forall e a b. Exception e => Fault a b -> Fault e b -> Fault a b
 (<!>) = flip $ decide f
   where
-    f a = unsafePerformIO $ (return $! Right $! a) `Catch.catch` (return . Left)
+    f :: a -> Either e a
+    f a = unsafePerformIO $
+      (return $! Right $! a) `Ex.catch` \(se :: SomeException) ->
+        case Ex.fromException se of
+          Just e  -> return (Left e)
+          Nothing -> return (Right a)
 
 -- | Contravariant branching.
 {-# INLINEABLE decide #-}
@@ -384,20 +400,6 @@ runFault f = unFault f . pureTry
 {-# INLINEABLE runFault' #-}
 runFault' :: HasCallStack => NFData a => Fault a b -> a -> b
 runFault' f = unFault f . pureTryDeep
-
--- | Run a fault handler on a monadic action (simpler than 'withFault').
---
--- @
--- withFaultIO myHandler (readFile "config.yaml")
--- @
-{-# INLINEABLE withFaultIO #-}
-withFaultIO :: HasCallStack => MonadUnliftIO m => Fault a b -> m a -> m b
-withFaultIO f action = unFault f <$> Catch.tryAny (evaluate =<< action)
-
--- | Run a fault handler in a 'MonadUnliftIO' context with a function argument.
-{-# INLINEABLE withFault #-}
-withFault :: HasCallStack => MonadUnliftIO m => Fault a b -> (r -> m a) -> r -> m b
-withFault f g = pure . unFault f <=< Catch.tryAny . (evaluate <=< g)
 
 ---------------------------------------------------------------------
 -- Internal

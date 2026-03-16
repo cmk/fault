@@ -38,6 +38,6 @@ module Control.Exception.Fault (
 
 import Control.Exception.Fault.Class
 import Control.Exception.Fault.Type
-import Control.Exception.Fault.Catch hiding (handle)
+import Control.Exception.Fault.Catch hiding (handle, throwIO)
 import Control.Exception.Fault.Throw hiding (throw)
 import Control.Exception.Fault.Wrap
