@@ -64,20 +64,20 @@ import GHC.TypeLits (ErrorMessage(..), TypeError)
 
 -- | A replacement for @Control.Exception.'Except.throw'@ that gives a
 -- compile error if used in 'IO'. Use 'throwIO' in monadic code instead.
-throw :: (Exception e, NotInIO a) => e -> a
+throw :: Exception e => NotInIO a => e -> a
 throw = Except.throw
 
 -- | Throw any 'Typeable' value as a 'Defect'. The function provides
 -- 'displayException' if uncaught.
-throwDefect :: (Typeable e, NotInIO a) => (e -> String) -> e -> a
+throwDefect :: Typeable e => NotInIO a => (e -> String) -> e -> a
 throwDefect f = throw . Defect f
 
 -- | Throw an exception with the current 'CallStack' attached.
-throwWithCallStack :: (HasCallStack, Exception e, NotInIO a) => (CallStack -> e) -> a
+throwWithCallStack :: HasCallStack => Exception e => NotInIO a => (CallStack -> e) -> a
 throwWithCallStack = throw . ($ callStack)
 
 -- | Eliminate an 'Either' by throwing the 'Left'.
-throwLeft :: (Exception e, NotInIO a) => Either e a -> a
+throwLeft :: Exception e => NotInIO a => Either e a -> a
 throwLeft = either throw id
 
 ---------------------------------------------------------------------
@@ -85,19 +85,19 @@ throwLeft = either throw id
 ---------------------------------------------------------------------
 
 -- | Throw an exception in any 'MonadIO'.
-throwIO :: (MonadIO m, Exception e) => e -> m a
+throwIO :: MonadIO m => Exception e => e -> m a
 throwIO = Catch.throwIO
 
 -- | Throw any 'Typeable' value as a 'Defect' in 'MonadIO'.
-throwIODefect :: (MonadIO m, Typeable e) => (e -> String) -> e -> m a
+throwIODefect :: MonadIO m => Typeable e => (e -> String) -> e -> m a
 throwIODefect f = throwIO . Defect f
 
 -- | Throw an exception with the current 'CallStack' in 'MonadIO'.
-throwIOWithCallStack :: (HasCallStack, MonadIO m, Exception e) => (CallStack -> e) -> m a
+throwIOWithCallStack :: HasCallStack => MonadIO m => Exception e => (CallStack -> e) -> m a
 throwIOWithCallStack = throwIO . ($ callStack)
 
 -- | Eliminate an 'Either' by throwing the 'Left' in 'MonadIO'.
-throwIOLeft :: (MonadIO m, Exception e) => Either e a -> m a
+throwIOLeft :: MonadIO m => Exception e => Either e a -> m a
 throwIOLeft = either throwIO pure
 
 ---------------------------------------------------------------------
@@ -111,11 +111,11 @@ addCallStack e = CallStackException e callStack
 -- | Catch an exception, seeing through 'CallStackException' wrappers.
 --
 -- __NB__: If you re-throw, the original 'CallStack' is discarded.
-catchIgnoringStack :: (MonadUnliftIO m, Exception e) => m a -> (e -> m a) -> m a
+catchIgnoringStack :: MonadUnliftIO m => Exception e => m a -> (e -> m a) -> m a
 catchIgnoringStack = flip handleIgnoringStack
 
 -- | Handle an exception, seeing through 'CallStackException' wrappers.
-handleIgnoringStack :: (MonadUnliftIO m, Exception e) => (e -> m a) -> m a -> m a
+handleIgnoringStack :: MonadUnliftIO m => Exception e => (e -> m a) -> m a -> m a
 handleIgnoringStack f = Catch.handle f . Catch.handle (\(CallStackException e _) -> f e)
 
 ---------------------------------------------------------------------
@@ -134,11 +134,11 @@ displayExceptions =
   handleIgnoringDisplay (\e -> throwIO (Display (e :: SomeException)))
 
 -- | Handle an exception, seeing through 'Display' wrappers.
-handleIgnoringDisplay :: (MonadUnliftIO m, Exception e) => (e -> m a) -> m a -> m a
+handleIgnoringDisplay :: MonadUnliftIO m => Exception e => (e -> m a) -> m a -> m a
 handleIgnoringDisplay f = Catch.handle f . Catch.handle (\(Display e) -> f e)
 
 -- | Catch variant of 'handleIgnoringDisplay'.
-catchIgnoringDisplay :: (MonadUnliftIO m, Exception e) => m a -> (e -> m a) -> m a
+catchIgnoringDisplay :: MonadUnliftIO m => Exception e => m a -> (e -> m a) -> m a
 catchIgnoringDisplay = flip handleIgnoringDisplay
 
 ---------------------------------------------------------------------

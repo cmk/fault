@@ -62,7 +62,7 @@ pureTryDeep a = unsafePerformIO $
 {-# INLINE pureTryDeep #-}
 
 -- | Catch synchronous exceptions only (async exceptions are re-thrown).
-catch :: (MonadUnliftIO m, Exception e) => m a -> (e -> m a) -> m a
+catch :: MonadUnliftIO m => Exception e => m a -> (e -> m a) -> m a
 catch action handler = withRunInIO $ \run ->
   run action `E.catch` \e ->
     if isSyncException e
@@ -85,7 +85,7 @@ evaluate = liftIO . E.evaluate
 ---------------------------------------------------------------------
 
 -- | Throw an exception in 'MonadIO'.
-throwIO :: (MonadIO m, Exception e) => e -> m a
+throwIO :: MonadIO m => Exception e => e -> m a
 throwIO = liftIO . E.throwIO
 {-# INLINE throwIO #-}
 
@@ -99,7 +99,7 @@ throwTo tid = liftIO . E.throwTo tid
 ---------------------------------------------------------------------
 
 -- | Catch synchronous exceptions matching a predicate.
-catchJust :: (MonadUnliftIO m, Exception e)
+catchJust :: MonadUnliftIO m => Exception e
           => (e -> Maybe b) -> m a -> (b -> m a) -> m a
 catchJust f action handler = catch action $ \e ->
   case f e of
@@ -108,18 +108,18 @@ catchJust f action handler = catch action $ \e ->
 {-# INLINE catchJust #-}
 
 -- | Try an action, catching a specific synchronous exception.
-try :: (MonadUnliftIO m, Exception e) => m a -> m (Either e a)
+try :: MonadUnliftIO m => Exception e => m a -> m (Either e a)
 try action = catch (fmap Right action) (return . Left)
 {-# INLINE try #-}
 
 -- | Try an action, catching synchronous exceptions matching a predicate.
-tryJust :: (MonadUnliftIO m, Exception e)
+tryJust :: MonadUnliftIO m => Exception e
         => (e -> Maybe b) -> m a -> m (Either b a)
 tryJust f action = catchJust f (fmap Right action) (return . Left)
 {-# INLINE tryJust #-}
 
 -- | Flipped 'catch'.
-handle :: (MonadUnliftIO m, Exception e) => (e -> m a) -> m a -> m a
+handle :: MonadUnliftIO m => Exception e => (e -> m a) -> m a -> m a
 handle = flip catch
 {-# INLINE handle #-}
 

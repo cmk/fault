@@ -359,7 +359,7 @@ runFault f = unFault f . pureTry
 
 -- | Run a fault handler on a value, deeply evaluating first.
 {-# INLINEABLE runFault' #-}
-runFault' :: (HasCallStack, NFData a) => Fault a b -> a -> b
+runFault' :: HasCallStack => NFData a => Fault a b -> a -> b
 runFault' f = unFault f . pureTryDeep
 
 -- | Run a fault handler on a monadic action (simpler than 'withFault').
@@ -368,12 +368,12 @@ runFault' f = unFault f . pureTryDeep
 -- withFaultIO myHandler (readFile "config.yaml")
 -- @
 {-# INLINEABLE withFaultIO #-}
-withFaultIO :: (HasCallStack, MonadUnliftIO m) => Fault a b -> m a -> m b
+withFaultIO :: HasCallStack => MonadUnliftIO m => Fault a b -> m a -> m b
 withFaultIO f action = unFault f <$> Catch.tryAny (evaluate =<< action)
 
 -- | Run a fault handler in a 'MonadUnliftIO' context with a function argument.
 {-# INLINEABLE withFault #-}
-withFault :: (HasCallStack, MonadUnliftIO m) => Fault a b -> (r -> m a) -> r -> m b
+withFault :: HasCallStack => MonadUnliftIO m => Fault a b -> (r -> m a) -> r -> m b
 withFault f g = pure . unFault f <=< Catch.tryAny . (evaluate <=< g)
 
 ---------------------------------------------------------------------
