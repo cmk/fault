@@ -30,6 +30,8 @@ library
       Test.Fault
       Test.Fault.Render
       Test.Fault.Report
+      Test.Fault.Show
+      Test.Fault.Throw
 
   default-language: Haskell2010
 
@@ -65,4 +67,5 @@ library
     , profunctors
     , profunctor-optics
     , text
+    , transformers
     , unliftio
