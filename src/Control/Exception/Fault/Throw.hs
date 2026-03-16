@@ -5,7 +5,7 @@
 
 -- | Various tools for improving the quality of the failures in your programs.
 --   This is meant to encourage you to "do the right thing" more often.
-module Test.Fault.Throw
+module Control.Exception.Fault.Throw
   ( -- * A better `Except.throw`
     throw,
     -- * attach a `CallStack` to exceptions
@@ -51,7 +51,7 @@ import qualified Control.Monad.Trans.Writer.Lazy as Lazy
 import qualified Control.Monad.Trans.Writer.Strict as Strict
 import Data.Kind (Constraint)
 import Data.Typeable (Typeable)
-import Test.Fault.Show as Show
+import Control.Exception.Fault.Show as Show
 import GHC.Stack (CallStack, HasCallStack, callStack, prettyCallStack)
 import GHC.TypeLits (ErrorMessage(..), TypeError)
 import System.Exit (exitFailure)

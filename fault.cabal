@@ -2,15 +2,19 @@ cabal-version: 2.0
 
 name:           fault
 version:        0.0.1
-synopsis:       A profunctor for fault-tolerant computation.
+synopsis:       Composable exception handlers as a profunctor.
 description:
-  The @Fault@ profunctor (@Costar (Either SomeException)@) with
-  Arrow, Category, and profunctor instances, plus the @Testable@
-  class for property-based testing with structured error reporting.
+  The @Fault@ type is @Either SomeException a -> b@ — a composable
+  exception handler with Arrow, Category, and profunctor instances.
+  Combine handlers with '(>>>)', override for specific exceptions with
+  '(\<!\>)', and run with 'runFault' or 'withFault'.
   .
-  See the <https://github.com/cmk/fault#readme README> for more information.
+  Also provides: type-safe throw\/throwIO distinction ('NotInIO'),
+  call stack attachment ('CallStacked'), displayException fix
+  ('Display', 'displayExceptions'), and structured error lifting
+  ('ExceptFailure').
 
-category:       Testing, Profunctors, Exceptions
+category:       Control, Exceptions, Profunctors
 stability:      Experimental
 homepage:       https://github.com/cmk/fault
 bug-reports:    https://github.com/cmk/fault/issues
@@ -27,11 +31,9 @@ source-repository head
 
 library
   exposed-modules:
-      Test.Fault
-      Test.Fault.Render
-      Test.Fault.Report
-      Test.Fault.Show
-      Test.Fault.Throw
+      Control.Exception.Fault
+      Control.Exception.Fault.Show
+      Control.Exception.Fault.Throw
 
   default-language: Haskell2010
 
@@ -57,15 +59,7 @@ library
 
   build-depends:
       base               >= 4.16  && < 5.0
-    , array
-    , ansi-terminal
-    , containers
     , deepseq
-    , mtl
-    , prettyprinter
-    , prettyprinter-ansi-terminal
     , profunctors
-    , profunctor-optics
-    , text
     , transformers
     , unliftio

@@ -21,7 +21,7 @@
 -- The pattern of the @infix*@ functions is that the first argument is the
 -- current precedence from `showsPrec`, the second is the precedence from the
 -- fixity delaration, then argument-operator-argument.
-module Test.Fault.Show where
+module Control.Exception.Fault.Show where
 
 -- | For `show`ing operators with an @infix@ fixity declaration.
 infixPrec
