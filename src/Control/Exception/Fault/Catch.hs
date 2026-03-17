@@ -50,7 +50,6 @@ import Control.Exception.Fault.Type (Fault, unFault)
 import Control.Exception.Fault.Wrap (SyncExceptionWrapper(..), AsyncExceptionWrapper(..))
 import Control.Monad ((<=<))
 import qualified Control.Exception as E
-import Data.Typeable (cast)
 import Prelude
 
 ---------------------------------------------------------------------

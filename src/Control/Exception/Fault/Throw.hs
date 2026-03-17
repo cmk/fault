@@ -18,9 +18,9 @@ module Control.Exception.Fault.Throw
     throwLeft,
     -- * Monadic throw
     throwIO,
+    throwIOLeft,
     throwIODefect,
     throwIOWithCallStack,
-    throwIOLeft,
     -- * Call stacks
     CallStackException (..),
     addCallStack,
@@ -86,8 +86,20 @@ throwLeft = either throw id
 ---------------------------------------------------------------------
 
 -- | Throw an exception in any 'MonadIO'.
+--
+-- In general it's preferable to treat a failure as a value in a disjunction
+-- (e.g. `Left` in `Either`) rather than as an exception, which doesn't
+-- appear in the type and has non-local effects.
+--
+-- However if you have no choice then use `throwIO` and/or `throwIOLeft`
+-- to convert the disjunction into an exception.
+--
 throwIO :: MonadIO m => Exception e => e -> m a
 throwIO = Catch.throwIO
+
+-- | Eliminate an 'Either' by throwing the 'Left' in 'MonadIO'.
+throwIOLeft :: MonadIO m => Exception e => Either e a -> m a
+throwIOLeft = either throwIO pure
 
 -- | Throw any 'Typeable' value as a 'Defect' in 'MonadIO'.
 throwIODefect :: MonadIO m => Typeable e => (e -> String) -> e -> m a
@@ -96,10 +108,6 @@ throwIODefect f e = throwIO (Defect e f)
 -- | Throw an exception with the current 'CallStack' in 'MonadIO'.
 throwIOWithCallStack :: HasCallStack => MonadIO m => Exception e => (CallStack -> e) -> m a
 throwIOWithCallStack = throwIO . ($ callStack)
-
--- | Eliminate an 'Either' by throwing the 'Left' in 'MonadIO'.
-throwIOLeft :: MonadIO m => Exception e => Either e a -> m a
-throwIOLeft = either throwIO pure
 
 ---------------------------------------------------------------------
 -- Call stacks

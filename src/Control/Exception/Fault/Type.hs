@@ -138,7 +138,7 @@ deriving via ((->) (Either SomeException a) b) instance Monoid b => Monoid (Faul
 -- [Left identity]  @'id' '>>>' f ≡ f@
 -- [Right identity] @f '>>>' 'id' ≡ f@
 -- [Associativity]  @(f '>>>' g) '>>>' h ≡ f '>>>' (g '>>>' h)@
-instance C.Category Fault where
+instance Category Fault where
     id = ignore id
     Fault f1 . Fault f2 = Fault $ f1 . pureTry . f2
 
@@ -166,6 +166,10 @@ instance ArrowLoop Fault where
 ---------------------------------------------------------------------
 
 -- | A value paired with a way to present it.
+--
+-- If a failure type was created by an external library it may not
+-- provide an 'Exception' instance, which means you can't throw it.
+-- 'Defect' provides a solution for this.
 --
 -- @Defect a b@ is an @a@ together with a projection @a -> b@.
 -- @Defect a@ is a 'Functor' in @b@ — you can post-compose the

@@ -24,7 +24,7 @@ import GHC.Stack (prettyCallStack)
 -- Context (AnnotatedException re-exported from Type)
 ---------------------------------------------------------------------
 
--- | An exception with an attached 'CallStack'.
+-- | Add a 'CallStack' to an exception.
 --
 -- @
 -- 'throwIO' ('CallStackException' myException 'callStack')
